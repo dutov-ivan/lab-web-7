@@ -1,0 +1,582 @@
+/* =============================
+   FONTS
+   ============================= */
+@import url("https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&family=Playfair+Display:ital,wght@0,400..900;1,400..900&display=swap");
+
+/* =============================
+   THEME VARIABLES
+   ============================= */
+:root {
+  --deep-blue: #1b3a7a;
+  --sky-blue: #3778ff;
+  --main-beige: #f2e1c1;
+  --rose: #ffbebe;
+  --light-beige: #f9f3e6;
+}
+
+/* =============================
+   RESET + BASE ELEMENTS
+   ============================= */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: inherit;
+}
+
+html {
+  overflow-x: hidden;
+}
+
+body {
+  font-family: "Inter", sans-serif;
+  background: linear-gradient(
+    180deg,
+    var(--sky-blue) 0%,
+    var(--main-beige) 27.4%
+  );
+  color: black;
+  font-size: 14px;
+  min-height: 100vh;
+}
+
+a {
+  text-decoration: none;
+  color: inherit;
+}
+
+h1 {
+  font-size: 40px;
+  font-weight: 700;
+}
+
+h2 {
+  line-height: 1;
+  font-size: 24px;
+}
+
+.quote {
+  font-family: "Playfair Display", serif;
+  font-size: 24px;
+  font-weight: 700;
+  font-style: italic;
+}
+
+nav,
+header,
+footer,
+main > div,
+div > div {
+  padding: 8px;
+}
+
+.hamburger {
+  display: none;
+}
+
+.visually-hidden {
+  position: absolute !important;
+  height: 1px;
+  width: 1px;
+  overflow: hidden;
+  clip: rect(1px, 1px, 1px, 1px);
+  white-space: nowrap;
+  border: 0;
+  padding: 0;
+  margin: -1px;
+}
+
+/* =============================
+   LAYOUT: GRID AREAS
+   ============================= */
+body {
+  overflow-x: hidden;
+  position: relative;
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  grid-template-rows: auto auto auto auto auto auto;
+  font-family: "Inter", sans-serif;
+  background: linear-gradient(
+    180deg,
+    var(--sky-blue) 0%,
+    var(--main-beige) 27.4%
+  );
+  color: black;
+  font-size: 14px;
+}
+
+/* =============================
+   HEADER
+   ============================= */
+header {
+  grid-column: 1 / -2;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 24px 96px 16px 96px;
+}
+
+#company-heading {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 16px;
+}
+
+#company-heading img {
+  height: 100px;
+  width: 100px;
+}
+
+#company-heading .quote {
+  font-size: 32px;
+  max-width: 256px;
+}
+
+/* =============================
+   MAIN AREA
+   ============================= */
+main {
+  grid-column: 1 / -2;
+  grid-row: 2 / -2;
+  display: grid;
+  grid-template-columns: 1fr 3fr;
+  grid-template-rows: auto;
+}
+
+#additional {
+  grid-column: 1 / 2;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  justify-content: center;
+  /* keep block from growing the page height; make its content scrollable */
+  flex: 0 0 25%;
+  max-height: 60vh;
+  overflow: auto;
+  background-color: var(--light-beige);
+  border-radius: 16px;
+  align-self: flex-start;
+  min-height: auto;
+}
+
+#main-display {
+  grid-column: 2 / -2;
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+  min-width: 0;
+  min-height: 100%;
+  background-color: var(--deep-blue);
+  border-top-left-radius: 16px;
+  border-top-right-radius: 16px;
+}
+
+#description {
+  display: flex;
+  align-items: center;
+  color: var(--rose);
+}
+
+/* =============================
+   NAVIGATION
+   ============================= */
+nav {
+  grid-row: 1 / -2;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  padding: 16px;
+}
+
+nav ul {
+  padding-top: 33%;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 32px;
+}
+
+nav a {
+  text-decoration: none;
+  color: var(--deep-blue);
+}
+
+#active-page {
+  text-decoration: underline;
+  color: var(--deep-blue);
+}
+
+#overlay {
+  position: absolute;
+  top: -480px;
+  right: -200px;
+  width: 553px;
+  transform: rotate(-64.151deg);
+  aspect-ratio: 48/79;
+  filter: blur(4px);
+}
+
+nav li {
+  z-index: 10;
+  transition: transform 0.3s ease;
+}
+
+nav li:hover {
+  transform: scale(1.2);
+}
+
+/* =============================
+   FOOTER
+   ============================= */
+footer {
+  grid-column: 1 / -1;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  color: white;
+  background-color: var(--deep-blue);
+  padding: 16px;
+}
+
+#footer-content {
+  display: flex;
+  gap: 16px;
+  align-items: center;
+}
+
+.social-icon {
+  width: 48px;
+  height: 48px;
+}
+
+footer .social-icon:hover {
+  transform: scale(1.2);
+}
+
+footer .social-icon {
+  filter: invert(1);
+  transition: transform 0.3s ease;
+}
+
+#explore-more {
+  font-style: italic;
+  text-decoration: underline;
+  color: white;
+}
+
+#main-content {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  overflow: hidden;
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
+#main-content > div {
+  flex: 1 1 0;
+  min-width: 0;
+}
+
+#main-content > div img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  max-width: 100%;
+}
+
+#read-more {
+  display: block;
+  font-weight: 700;
+}
+
+/* =============================
+   MEDIA QUERIES
+   ============================= */
+
+@media (max-width: 992px) {
+  #overlay {
+    display: none;
+  }
+
+  .hamburger {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 6px;
+    cursor: pointer;
+  }
+  .hamburger span {
+    display: block;
+    width: 30px;
+    height: 4px;
+    background-color: var(--deep-blue);
+    border-radius: 2px;
+    transition: transform 0.25s ease, opacity 0.2s ease;
+  }
+
+  /* make label behave like a button when focused */
+  .hamburger:focus-visible {
+    outline: 2px solid var(--deep-blue);
+    outline-offset: 2px;
+  }
+
+  body {
+    grid-template-columns: 3fr 1fr;
+    grid-template-rows: auto auto auto auto;
+  }
+
+  header {
+    grid-row: 1 / 2;
+    grid-column: 1 / 2;
+    padding: 16px 24px;
+  }
+
+  nav {
+    grid-column: 2 / -1;
+    grid-row: 1 / 2;
+    position: relative;
+  }
+  nav #primary-nav {
+    position: absolute;
+    top: 100%;
+    right: 16px;
+    left: auto;
+    width: min(320px, calc(100% - 32px));
+    margin-top: 8px;
+    padding: 16px;
+    background: #fff;
+    border-radius: 12px;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+    list-style: none;
+    display: none;
+    z-index: 1000;
+    padding-top: 16px;
+    gap: 16px;
+  }
+  /* Show primary nav when checkbox is checked (CSS-only) */
+  #menu-toggle:checked ~ #primary-nav {
+    display: flex;
+    flex-direction: column;
+  }
+  nav #primary-nav li {
+    transform: none;
+  }
+  nav #primary-nav li:hover {
+    transform: translateX(4px);
+    transition: 0.2s ease;
+  }
+  #hamburger-button {
+    margin-left: auto;
+  }
+  main {
+    grid-column: 1 / -1;
+    grid-row: 2 / -2;
+    display: grid;
+    grid-template-columns: 1fr 2fr;
+  }
+
+  #additional {
+    grid-column: 1 / 2;
+  }
+
+  #main-display {
+    grid-column: 2 / -1;
+  }
+
+  h1 {
+    font-size: 32px;
+  }
+}
+
+@media (max-width: 768px) {
+  header .quote {
+    display: none;
+  }
+
+  main {
+    grid-template-columns: 1fr;
+  }
+  #main-display {
+    grid-column: 1 / -1;
+    grid-row: 1;
+  }
+  #additional {
+    grid-column: 1 / -1;
+    grid-row: 2;
+    min-height: auto;
+    padding-top: 32px;
+  }
+}
+
+@media (max-width: 576px) {
+  footer {
+    display: grid;
+    grid-template-columns: 1fr;
+    grid-auto-rows: auto;
+    row-gap: 8px;
+  }
+  #footer-content {
+    grid-row: 1;
+    justify-self: start;
+  }
+  #explore-more {
+    grid-row: 2;
+    justify-self: start;
+  }
+
+  #main-content {
+    flex-direction: column;
+    justify-content: flex-start;
+  }
+
+  #company-heading {
+    gap: 8px;
+    padding: 8px;
+  }
+  #company-heading img {
+    width: 64px;
+    height: 64px;
+  }
+  header h1 {
+    font-size: 28px;
+  }
+
+  /* Show overlay on very small screens when menu is open */
+  #menu-toggle:checked ~ .menu-overlay {
+    display: block;
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.35);
+    z-index: 1500;
+    cursor: pointer;
+  }
+  /* ensure primary nav stacks above overlay */
+  #menu-toggle:checked ~ #primary-nav {
+    z-index: 2000;
+  }
+}
+/* =============================
+   HAMBURGER SLIDE-OUT WIDTH RULES
+   ============================= */
+@media (min-width: 576px) and (max-width: 992px) {
+  nav #primary-nav {
+    position: fixed;
+    top: 0;
+    right: 0;
+    height: 100dvh;
+    width: 33.333vw; /* one-third of screen */
+    max-width: none;
+    margin: 0;
+    padding: 24px 16px;
+    background: #fff;
+    border-radius: 0;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
+    display: flex; /* ensure visible for transform animation */
+    flex-direction: column;
+    gap: 16px;
+    list-style: none;
+    z-index: 2000;
+    transform: translateX(100%);
+    transition: transform 0.3s ease;
+    visibility: hidden; /* hidden when closed */
+    pointer-events: none; /* don't block clicks when closed */
+  }
+  /* Slide-in menu when checkbox is checked */
+  #menu-toggle:checked ~ #primary-nav {
+    transform: translateX(0);
+    visibility: visible;
+    pointer-events: auto;
+  }
+
+  #menu-toggle:checked + .hamburger span:nth-child(1) {
+    transform: translateY(8px) rotate(45deg);
+  }
+  #menu-toggle:checked + .hamburger span:nth-child(2) {
+    opacity: 0;
+  }
+  #menu-toggle:checked + .hamburger span:nth-child(3) {
+    transform: translateY(-8px) rotate(-45deg);
+  }
+
+  #menu-toggle:checked ~ #primary-nav {
+    transform: translateX(0) !important;
+    visibility: visible !important;
+    pointer-events: auto !important;
+    display: flex !important;
+  }
+
+  .menu-overlay {
+    display: none;
+  }
+
+  @media (max-width: 992px) {
+    #menu-toggle:checked ~ .menu-overlay {
+      display: block;
+      position: fixed;
+      inset: 0; /* cover whole viewport */
+      background: rgba(0, 0, 0, 0.3);
+      z-index: 1500; /* behind the nav (nav has 2000) but above page content */
+      cursor: pointer;
+    }
+    /* Ensure the menu (primary-nav) is above the overlay */
+    #menu-toggle:checked ~ #primary-nav {
+      z-index: 2000;
+    }
+  }
+}
+
+@media (max-width: 576px) {
+  nav #primary-nav {
+    position: fixed;
+    top: 0;
+    right: 0;
+    height: 100dvh;
+    width: 50vw;
+    max-width: none;
+    margin: 0;
+    padding: 24px 16px;
+    background: #fff;
+    border-radius: 0;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    list-style: none;
+    z-index: 2000;
+    transform: translateX(100%);
+    transition: transform 0.3s ease;
+    visibility: hidden;
+    pointer-events: none;
+  }
+  /* Small-screen slide-in using checkbox state */
+  #menu-toggle:checked ~ #primary-nav {
+    transform: translateX(0);
+    visibility: visible;
+    pointer-events: auto;
+  }
+
+  nav #primary-nav li {
+    text-align: center;
+  }
+}
+
+/* =============================
+   ACCESSIBILITY & MOTION
+   ============================= */
+nav a:focus-visible,
+footer a:focus-visible,
+.hamburger:focus-visible,
+#hamburger-button:focus-visible {
+  outline: 2px solid var(--deep-blue);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation: none !important;
+    transition: none !important;
+    scroll-behavior: auto !important;
+  }
+}

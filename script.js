@@ -1,0 +1,329 @@
+(function () {
+  const mainContent = document.querySelector("#main-content");
+  const description = document.querySelector("#description");
+  const playBtn = document.querySelector("#play");
+  const logsSection = document.querySelector("#logs-3");
+  const eventsTableBody = document.querySelector("#events-table tbody");
+
+  const LS_KEY = "salvadorium_anim_events";
+  let eventSeq = 0;
+  let events = [];
+
+  function nowTs() {
+    return new Date().toISOString();
+  }
+
+  function addEvent(message, type = "info") {
+    eventSeq += 1;
+    const evt = { id: eventSeq, time: nowTs(), message, type };
+    events.push(evt);
+    try {
+      localStorage.setItem(LS_KEY, JSON.stringify(events));
+    } catch (e) {}
+  }
+
+  function readEventsFromLocalStorage() {
+    try {
+      const raw = localStorage.getItem(LS_KEY);
+      return raw ? JSON.parse(raw) : [];
+    } catch (e) {
+      return [];
+    }
+  }
+
+  function clearEvents() {
+    events = [];
+    eventSeq = 0;
+    try {
+      localStorage.removeItem(LS_KEY);
+    } catch (e) {}
+  }
+
+  function createWorkArea() {
+    const work = document.createElement("div");
+    work.id = "work";
+    work.style.position = "relative";
+    work.style.width = "100%";
+    work.style.height = "100%";
+    work.style.display = "flex";
+    work.style.flexDirection = "column";
+
+    const controls = document.createElement("div");
+    controls.id = "controls";
+    controls.style.flex = "0 0 50px";
+    controls.style.display = "flex";
+    controls.style.alignItems = "center";
+    controls.style.gap = "8px";
+    controls.style.padding = "8px";
+    controls.style.boxSizing = "border-box";
+    controls.style.background = "#f7f7f7";
+    controls.style.borderTop = "1px solid #ddd";
+
+    const closeBtn = document.createElement("button");
+    closeBtn.id = "close";
+    closeBtn.textContent = "Close";
+
+    const startBtn = document.createElement("button");
+    startBtn.id = "start";
+    startBtn.textContent = "Start";
+
+    const stopBtn = document.createElement("button");
+    stopBtn.id = "stop";
+    stopBtn.textContent = "Stop";
+    stopBtn.style.display = "none";
+
+    const reloadBtn = document.createElement("button");
+    reloadBtn.id = "reload";
+    reloadBtn.textContent = "Reload";
+    reloadBtn.style.display = "none";
+
+    const info = document.createElement("div");
+    info.id = "info";
+    info.style.marginLeft = "auto";
+    info.style.fontSize = "0.9rem";
+    info.style.color = "#333";
+
+    controls.append(closeBtn, startBtn, stopBtn, reloadBtn, info);
+
+    const anim = document.createElement("div");
+    anim.id = "anim";
+    anim.style.flex = "1 1 auto";
+    anim.style.margin = "0";
+    anim.style.boxSizing = "border-box";
+    anim.style.border = "5px solid orange";
+    anim.style.width = "calc(100% - 10px)";
+    anim.style.height = "calc(100% - 50px)";
+    anim.style.position = "relative";
+    anim.style.alignSelf = "stretch";
+    anim.style.justifySelf = "stretch";
+    anim.style.backgroundColor = "#fff";
+
+    const circle = document.createElement("div");
+    circle.id = "circle";
+    const R = 15;
+    circle.style.position = "absolute";
+    circle.style.width = `${R * 2}px`;
+    circle.style.height = `${R * 2}px`;
+    circle.style.borderRadius = "50%";
+    circle.style.background = "green";
+
+    anim.appendChild(circle);
+    work.append(anim, controls);
+
+    let directionIndex = 0;
+    let segmentLength = 1;
+    let timer = null;
+    let running = false;
+
+    function setInfo(msg) {
+      info.textContent = msg;
+    }
+
+    function centerCircle() {
+      const w = anim.clientWidth;
+      const h = anim.clientHeight;
+      const cx = Math.floor(w / 2) - R;
+      const cy = Math.floor(h / 2) - R;
+      circle.style.left = `${cx}px`;
+      circle.style.top = `${cy}px`;
+      directionIndex = 0;
+      segmentLength = 1;
+      addEvent("Circle placed at center");
+      setInfo("Circle centered");
+    }
+
+    function getCirclePos() {
+      const x = parseInt(circle.style.left || "0", 10);
+      const y = parseInt(circle.style.top || "0", 10);
+      return { x, y };
+    }
+
+    function boundsCheck({ x, y }) {
+      const w = anim.clientWidth;
+      const h = anim.clientHeight;
+      const leftOut = x + R * 2 <= 0;
+      const rightOut = x >= w;
+      const topOut = y + R * 2 <= 0;
+      const bottomOut = y >= h;
+      return leftOut || rightOut || topOut || bottomOut;
+    }
+
+    function touchedWall({ x, y }) {
+      const w = anim.clientWidth;
+      const h = anim.clientHeight;
+      const touchLeft = x <= 0;
+      const touchTop = y <= 0;
+      const touchRight = x + R * 2 >= w;
+      const touchBottom = y + R * 2 >= h;
+      return touchLeft || touchTop || touchRight || touchBottom;
+    }
+
+    function nextDirection() {
+      directionIndex = (directionIndex + 1) % 4;
+    }
+
+    function step() {
+      let { x, y } = getCirclePos();
+      const len = segmentLength;
+      switch (directionIndex) {
+        case 0:
+          x -= len;
+          break;
+        case 1:
+          y += len;
+          break;
+        case 2:
+          x += len;
+          break;
+        case 3:
+          y -= len;
+          break;
+      }
+
+      circle.style.left = `${x}px`;
+      circle.style.top = `${y}px`;
+
+      addEvent(`Circle moved: dir=${directionIndex} len=${len}`);
+      setInfo(
+        `Move ${len}px, dir=${["left", "down", "right", "up"][directionIndex]}`
+      );
+
+      if (boundsCheck({ x, y })) {
+        addEvent("Circle fully exited anim — animation stopped", "error");
+        stopAnimation(false);
+        stopBtn.style.display = "none";
+        reloadBtn.style.display = "inline-block";
+        setInfo("Exited. Use Reload.");
+        return;
+      }
+
+      if (touchedWall({ x, y })) {
+        addEvent("Circle touched wall", "warn");
+        stopAnimation(false);
+        stopBtn.style.display = "none";
+        reloadBtn.style.display = "inline-block";
+        setInfo("Touched wall. Reload or close.");
+        return;
+      }
+
+      segmentLength += 1;
+      nextDirection();
+    }
+
+    function startAnimation() {
+      if (running) return;
+      running = true;
+      addEvent("Start button pressed");
+      setInfo("Running…");
+      startBtn.style.display = "none";
+      stopBtn.style.display = "inline-block";
+      reloadBtn.style.display = "none";
+      timer = setInterval(step, 20);
+    }
+
+    function stopAnimation(userInitiated = false) {
+      if (!running) {
+        if (timer) {
+          clearInterval(timer);
+          timer = null;
+        }
+      }
+      running = false;
+      if (userInitiated) addEvent("Stop button pressed");
+      setInfo("Stopped");
+      if (timer) {
+        clearInterval(timer);
+        timer = null;
+      }
+      stopBtn.style.display = "none";
+      if (userInitiated) startBtn.style.display = "inline-block";
+    }
+
+    function reloadCircle() {
+      addEvent("Reload requested");
+      centerCircle();
+      reloadBtn.style.display = "none";
+      startBtn.style.display = "inline-block";
+      stopBtn.style.display = "none";
+      setInfo("Ready");
+    }
+
+    closeBtn.addEventListener("click", () => {
+      addEvent("Close button pressed");
+      stopAnimation();
+      renderLogs();
+      work.remove();
+    });
+
+    startBtn.addEventListener("click", startAnimation);
+    stopBtn.addEventListener("click", () => stopAnimation(true));
+    reloadBtn.addEventListener("click", reloadCircle);
+
+    return {
+      work,
+      anim,
+      controls,
+      centerCircle,
+      startAnimation,
+      stopAnimation,
+      reloadCircle,
+      startBtn,
+      stopBtn,
+      reloadBtn,
+    };
+
+    function renderLogs() {
+      if (logsSection) logsSection.style.display = "block";
+      if (!eventsTableBody) return;
+      eventsTableBody.innerHTML = "";
+      const localEvents = readEventsFromLocalStorage();
+      const serverEvents = localEvents.map((e) => ({
+        ...e,
+        note: "server placeholder",
+      }));
+      const len = Math.max(localEvents.length, serverEvents.length);
+      for (let i = 0; i < len; i++) {
+        const tr = document.createElement("tr");
+        const tdLocal = document.createElement("td");
+        const tdServer = document.createElement("td");
+        const le = localEvents[i];
+        const se = serverEvents[i];
+        tdLocal.textContent = le ? `#${le.id} ${le.time} — ${le.message}` : "";
+        tdServer.textContent = se
+          ? `#${se.id} ${se.time} — ${se.message} (${se.note})`
+          : "";
+        tr.append(tdLocal, tdServer);
+        eventsTableBody.appendChild(tr);
+      }
+      clearEvents();
+    }
+  }
+
+  function ensureWorkContainer() {
+    if (!mainContent) return null;
+    const prev = document.querySelector("#work");
+    if (prev) prev.remove();
+    const api = createWorkArea();
+    const { work, centerCircle } = api;
+    mainContent.style.position = "relative";
+    mainContent.style.minHeight = "300px";
+    work.style.position = "absolute";
+    work.style.left = "0";
+    work.style.top = "0";
+    work.style.right = "0";
+    work.style.bottom = "0";
+    mainContent.appendChild(work);
+    try {
+      centerCircle();
+    } catch (e) {}
+    addEvent("Work area created");
+    return work;
+  }
+
+  if (playBtn) {
+    playBtn.addEventListener("click", () => {
+      addEvent("Play button pressed");
+      ensureWorkContainer();
+    });
+  }
+})();
