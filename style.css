@@ -150,18 +150,16 @@ main {
   gap: 8px;
   justify-content: center;
   /* keep block from growing the page height; make its content scrollable */
-  flex: 0 0 25%;
-  max-height: 60vh;
   overflow: auto;
   background-color: var(--light-beige);
   border-radius: 16px;
   align-self: flex-start;
-  min-height: auto;
   padding: 16px;
   height: 100%;
 }
 
 #additional-content {
+  /* prevent long words/URLs from overflowing the container */
   overflow-wrap: anywhere;
   word-break: break-word;
 }
