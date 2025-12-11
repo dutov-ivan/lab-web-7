@@ -9,17 +9,88 @@
   let eventSeq = 0;
   let events = [];
 
+  // Server endpoints (adjust if needed)
+  const IMMEDIATE_URL = "server_immediate.php";
+  const BATCH_URL = "server_batch.php";
+  let serverClientOffsetMs = 0;
+
   function nowTs() {
     return new Date().toISOString();
   }
 
-  function addEvent(message, type = "info") {
+  function addEvent(message, type = "info", opts = {}) {
     eventSeq += 1;
     const evt = { id: eventSeq, time: nowTs(), message, type };
     events.push(evt);
     try {
       localStorage.setItem(LS_KEY, JSON.stringify(events));
     } catch (e) {}
+
+    // send immediate event to server unless explicitly skipped
+    if (!opts.skipSend) {
+      try {
+        sendImmediateEvent(evt).catch(() => {});
+      } catch (e) {}
+    }
+  }
+
+  // Send a single event immediately to server and record server time offset
+  async function sendImmediateEvent(evt) {
+    try {
+      const payload = {
+        id: evt.id,
+        time_local: evt.time,
+        message: evt.message,
+        type: evt.type,
+      };
+      const res = await fetch(IMMEDIATE_URL, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+        cache: "no-cache",
+      });
+      if (!res.ok) return;
+      const json = await res.json();
+      if (json && json.server_time) {
+        const serverDate = new Date(json.server_time);
+        const localNow = new Date();
+        serverClientOffsetMs = serverDate - localNow;
+        const diffH = Math.round((serverClientOffsetMs / 3600000) * 100) / 100;
+        if (Math.abs(diffH) >= 2) {
+          // warn locally without re-sending this warning
+          addEvent(
+            `Server clock differs from local by ${diffH} hours. Using server UTC time.`,
+            "warn",
+            { skipSend: true }
+          );
+        }
+      }
+    } catch (e) {
+      // ignore network errors
+    }
+  }
+
+  // Send accumulated events from LocalStorage in one batch
+  async function sendBatchFromLocalStorage() {
+    try {
+      const raw = localStorage.getItem(LS_KEY);
+      if (!raw) return;
+      const localEvents = JSON.parse(raw);
+      if (!Array.isArray(localEvents) || localEvents.length === 0) return;
+      const res = await fetch(BATCH_URL, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ events: localEvents }),
+        cache: "no-cache",
+      });
+      if (!res.ok) return;
+      const json = await res.json();
+      if (json && json.status === "ok") {
+        clearEvents();
+      }
+    } catch (e) {
+      // fail silently
+    }
   }
 
   function readEventsFromLocalStorage() {
@@ -97,6 +168,9 @@
     anim.style.alignSelf = "stretch";
     anim.style.justifySelf = "stretch";
     anim.style.backgroundColor = "#fff";
+    // 32x32 repeating texture for the animation background
+    anim.style.backgroundImage = 'url("img/textures/texture32.png")';
+    anim.style.backgroundRepeat = "repeat";
 
     const circle = document.createElement("div");
     circle.id = "circle";
@@ -218,7 +292,7 @@
       startBtn.style.display = "none";
       stopBtn.style.display = "inline-block";
       reloadBtn.style.display = "none";
-      timer = setInterval(step, 20);
+      timer = setInterval(step, 10);
     }
 
     function stopAnimation(userInitiated = false) {
@@ -251,8 +325,15 @@
     closeBtn.addEventListener("click", () => {
       addEvent("Close button pressed");
       stopAnimation();
-      renderLogs();
-      work.remove();
+      // snapshot localStorage events before attempting batch send
+      const snapshot = readEventsFromLocalStorage();
+      // attempt batch send, then render logs using the snapshot and remove work area
+      sendBatchFromLocalStorage()
+        .catch(() => {})
+        .finally(() => {
+          renderLogs(snapshot);
+          work.remove();
+        });
     });
 
     startBtn.addEventListener("click", startAnimation);
@@ -272,29 +353,77 @@
       reloadBtn,
     };
 
-    function renderLogs() {
+    async function renderLogs(snapshot) {
       if (logsSection) logsSection.style.display = "block";
       if (!eventsTableBody) return;
       eventsTableBody.innerHTML = "";
-      const localEvents = readEventsFromLocalStorage();
-      const serverEvents = localEvents.map((e) => ({
-        ...e,
-        note: "server placeholder",
-      }));
-      const len = Math.max(localEvents.length, serverEvents.length);
-      for (let i = 0; i < len; i++) {
+      const localEvents = Array.isArray(snapshot)
+        ? snapshot
+        : readEventsFromLocalStorage();
+
+      // try to fetch server logs and map them by event id
+      const serverMap = Object.create(null);
+      try {
+        const res = await fetch("server_fetch_logs.php", { cache: "no-cache" });
+        if (res.ok) {
+          const json = await res.json();
+          // immediate entries contain 'event_id' and 'received_at'
+          (json.immediate || []).forEach((entry) => {
+            const id =
+              entry["event_id"] ?? (entry["payload"] && entry["payload"]["id"]);
+            if (id != null) {
+              serverMap[id] = {
+                received_at: entry["received_at"] || null,
+                source: "immediate",
+                entry,
+              };
+            }
+          });
+          // batches: each batch has 'received_at' and 'events' array
+          (json.batches || []).forEach((batch) => {
+            const batchReceived = batch["received_at"] || null;
+            const evs = batch["events"] || [];
+            evs.forEach((e) => {
+              const id = e["id"] ?? null;
+              if (id != null && !(id in serverMap)) {
+                serverMap[id] = {
+                  received_at: batchReceived,
+                  source: "batch",
+                  entry: e,
+                };
+              }
+            });
+          });
+        }
+      } catch (e) {
+        // ignore fetch errors and fallback to placeholder
+      }
+
+      // Render rows for local events, using serverMap when available
+      for (let i = 0; i < localEvents.length; i++) {
+        const le = localEvents[i];
         const tr = document.createElement("tr");
         const tdLocal = document.createElement("td");
         const tdServer = document.createElement("td");
-        const le = localEvents[i];
-        const se = serverEvents[i];
-        tdLocal.textContent = le ? `#${le.id} ${le.time} — ${le.message}` : "";
-        tdServer.textContent = se
-          ? `#${se.id} ${se.time} — ${se.message} (${se.note})`
-          : "";
+        tdLocal.textContent = `#${le.id} ${le.time} — ${le.message}`;
+
+        const serverRec = serverMap[le.id];
+        if (serverRec) {
+          if (serverRec.source === "immediate") {
+            const s = serverRec.entry;
+            tdServer.textContent = `#${le.id} ${serverRec.received_at} — ${s["message"]}`;
+          } else {
+            // batch: show batch received time and event message
+            tdServer.textContent = `#${le.id} ${serverRec.received_at} — ${le.message} (batch)`;
+          }
+        } else {
+          tdServer.textContent = "(no server record)";
+        }
+
         tr.append(tdLocal, tdServer);
         eventsTableBody.appendChild(tr);
       }
+
       clearEvents();
     }
   }
@@ -326,4 +455,22 @@
       ensureWorkContainer();
     });
   }
+
+  // On page unload, try to send batch via navigator.sendBeacon for reliability
+  window.addEventListener("beforeunload", () => {
+    try {
+      const raw = localStorage.getItem(LS_KEY);
+      if (!raw) return;
+      const localEvents = JSON.parse(raw);
+      if (!Array.isArray(localEvents) || localEvents.length === 0) return;
+      const payload = JSON.stringify({ events: localEvents });
+      if (navigator && typeof navigator.sendBeacon === "function") {
+        const blob = new Blob([payload], { type: "application/json" });
+        const sent = navigator.sendBeacon(BATCH_URL, blob);
+        if (sent) clearEvents();
+      }
+    } catch (e) {
+      // ignore
+    }
+  });
 })();
