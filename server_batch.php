@@ -13,7 +13,7 @@ if (!$data || !isset($data['events']) || !is_array($data['events'])) {
 
 // Use microtime to record arrival time with microsecond precision
 $micro = microtime(true);
-$dt = DateTime::createFromFormat('U.u', sprintf('%.3F', $micro));
+$dt = DateTime::createFromFormat('U.u', sprintf('%.6F', $micro));
 if ($dt === false) {
     $server_time = gmdate('c');
 } else {
@@ -28,6 +28,7 @@ $batchEntry = [
 ];
 
 $logLine = json_encode($batchEntry, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) . PHP_EOL;
-file_put_contents(__DIR__ . '/events_batch.log', $logLine, FILE_APPEND | LOCK_EX);
+// Store only the latest batch (overwrite instead of append)
+file_put_contents(__DIR__ . '/events_batch.log', $logLine, LOCK_EX);
 
 echo json_encode(['status' => 'ok', 'server_time' => $server_time]);

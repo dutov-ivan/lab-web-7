@@ -13,7 +13,7 @@ if (!$data) {
 
 // Use microtime to record arrival time with microsecond precision
 $micro = microtime(true);
-$dt = DateTime::createFromFormat('U.u', sprintf('%.3F', $micro));
+$dt = DateTime::createFromFormat('U.u', sprintf('%.6F', $micro));
 if ($dt === false) {
     // fallback to second precision ISO8601 UTC
     $server_time = gmdate('c');

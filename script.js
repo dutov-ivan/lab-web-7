@@ -71,16 +71,21 @@
   }
 
   // Send accumulated events from LocalStorage in one batch
+  // Track last batch timing for rendering
+  let lastBatchMeta = { sent_at: null, server_received_at: null };
+
   async function sendBatchFromLocalStorage() {
     try {
       const raw = localStorage.getItem(LS_KEY);
       if (!raw) return;
       const localEvents = JSON.parse(raw);
       if (!Array.isArray(localEvents) || localEvents.length === 0) return;
+      // record the client-side batch sent time (UTC ISO)
+      const sentAt = nowTs();
       const res = await fetch(BATCH_URL, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ events: localEvents }),
+        body: JSON.stringify({ events: localEvents, sent_at: sentAt }),
         cache: "no-cache",
       });
       if (!res.ok) return;
@@ -88,6 +93,11 @@
       if (json && json.status === "ok") {
         clearEvents();
       }
+      // capture meta for render
+      lastBatchMeta.sent_at = sentAt;
+      lastBatchMeta.server_received_at =
+        json && json.server_time ? json.server_time : null;
+      return json;
     } catch (e) {
       // fail silently
     }
@@ -322,18 +332,17 @@
       setInfo("Ready");
     }
 
-    closeBtn.addEventListener("click", () => {
+    closeBtn.addEventListener("click", async () => {
       addEvent("Close button pressed");
       stopAnimation();
       // snapshot localStorage events before attempting batch send
       const snapshot = readEventsFromLocalStorage();
-      // attempt batch send, then render logs using the snapshot and remove work area
-      sendBatchFromLocalStorage()
-        .catch(() => {})
-        .finally(() => {
-          renderLogs(snapshot);
-          work.remove();
-        });
+      // send batch and then render with batch meta included
+      try {
+        await sendBatchFromLocalStorage();
+      } catch (e) {}
+      renderLogs(snapshot, lastBatchMeta);
+      work.remove();
     });
 
     startBtn.addEventListener("click", startAnimation);
@@ -353,7 +362,7 @@
       reloadBtn,
     };
 
-    async function renderLogs(snapshot) {
+    async function renderLogs(snapshot, batchMeta) {
       if (logsSection) logsSection.style.display = "block";
       if (!eventsTableBody) return;
       eventsTableBody.innerHTML = "";
@@ -379,6 +388,8 @@
               };
             }
           });
+
+          console.log(json.batches);
           // batches: each batch has 'received_at' and 'events' array
           (json.batches || []).forEach((batch) => {
             const batchReceived = batch["received_at"] || null;
@@ -397,6 +408,25 @@
         }
       } catch (e) {
         // ignore fetch errors and fallback to placeholder
+      }
+
+      // If batchMeta provided, render a heading row for batch timing
+      if (batchMeta && (batchMeta.sent_at || batchMeta.server_received_at)) {
+        const trMeta = document.createElement("tr");
+        const tdLocalMeta = document.createElement("td");
+        const tdServerMeta = document.createElement("td");
+        tdLocalMeta.textContent = batchMeta.sent_at
+          ? `Batch sent at: ${batchMeta.sent_at}`
+          : "Batch sent: (unknown)";
+        tdServerMeta.textContent = batchMeta.server_received_at
+          ? `Batch recorded at server: ${batchMeta.server_received_at}`
+          : "Batch recorded at server: (pending)";
+        // style to distinguish meta row
+        trMeta.style.backgroundColor = "#eef7ff";
+        tdLocalMeta.style.fontWeight = "600";
+        tdServerMeta.style.fontWeight = "600";
+        eventsTableBody.appendChild(trMeta);
+        trMeta.append(tdLocalMeta, tdServerMeta);
       }
 
       // Render rows for local events, using serverMap when available
